@@ -10,6 +10,7 @@ import {
   catalogToStudentFormation,
   extractParcoursFromFormation,
   formationIdFromCatalog,
+  formationSlugFromCatalog,
   mergeCatalogWithFormation,
 } from '@/features/formations/utils/catalogFormationBridge'
 import {
@@ -28,8 +29,6 @@ export function useCatalogFormation(
 ) {
   const dispatch = useAppDispatch()
   const skip = catalogId == null || Number.isNaN(catalogId)
-  const formationId =
-    catalogId != null ? formationIdFromCatalog(catalogId) : undefined
   const hydratedRef = useRef<number | null>(null)
 
   const {
@@ -37,6 +36,14 @@ export function useCatalogFormation(
     isLoading: catalogLoading,
     isError: catalogError,
   } = useGetFormationCatalogQuery(catalogId!, { skip })
+
+  const formationId = useMemo(() => {
+    if (catalog) return formationSlugFromCatalog(catalog)
+    if (catalogId != null && !Number.isNaN(catalogId)) {
+      return formationIdFromCatalog(catalogId)
+    }
+    return undefined
+  }, [catalog, catalogId])
 
   const {
     data: parcours,
