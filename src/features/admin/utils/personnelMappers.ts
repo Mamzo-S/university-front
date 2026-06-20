@@ -21,12 +21,14 @@ export interface BackendMembreResponse {
   specialite?: string
   ine?: string
   dateNaissance?: string
-  anneeEntree?: number
-  anneeSortie?: number
+  niveau?: string
   promotionNom?: string
   formationNom?: string
   filiereId?: number
   filiereNom?: string
+  promotionId?: number
+  groupeEtudiantId?: number
+  groupeEtudiantNom?: string
   formationIds?: number[]
   formationNoms?: string[]
 }
@@ -63,8 +65,7 @@ export interface BackendUpdateUserRequest {
   dateNaissance?: string
   promotionNom?: string
   formationNom?: string
-  anneeEntree?: number
-  anneeSortie?: number
+  niveau?: string
   grade?: string
   specialite?: string
   fonction?: string
@@ -82,8 +83,7 @@ export interface BackendCreateUserRequest {
   dateNaissance?: string
   promotionNom?: string
   formationNom?: string
-  anneeEntree?: number
-  anneeSortie?: number
+  niveau?: string
   grade?: string
   specialite?: string
   fonction?: string
@@ -111,7 +111,7 @@ export function toCreateUserRequest(
       break
     case UserRole.STUDENT:
       body.ine = values.ine?.trim()
-      body.anneeEntree = values.startYear ?? new Date().getFullYear()
+      body.niveau = values.niveauEtude ?? 'LICENCE_1'
       body.promotionNom = values.promotion?.trim()
       body.formationNom = values.program?.trim()
       if (values.dateOfBirth) {
@@ -159,8 +159,7 @@ export function toUpdateUserRequest(
     dateNaissance: createBody.dateNaissance,
     promotionNom: createBody.promotionNom,
     formationNom: createBody.formationNom,
-    anneeEntree: createBody.anneeEntree,
-    anneeSortie: createBody.anneeSortie,
+    niveau: createBody.niveau,
     grade: createBody.grade,
     specialite: createBody.specialite,
     fonction: createBody.fonction,
@@ -197,7 +196,7 @@ export function mapMembreToAdminPersonnel(
     dateOfBirth: membre.dateNaissance,
     program: membre.formationNom,
     promotion: membre.promotionNom,
-    startYear: membre.anneeEntree,
+    niveauEtude: membre.niveau,
   }
 }
 

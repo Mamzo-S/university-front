@@ -14,6 +14,7 @@ import {
 import { FormationCatalogModal } from '@/features/catalog/components/FormationCatalogModal'
 import { ConfirmDialog } from '@/features/formations/components/ConfirmDialog'
 import { CrudActions } from '@/features/formations/components/CrudActions'
+import { formatNiveauEtude } from '@/types/niveauEtude'
 
 export function TrainingFormationsPage() {
   const { data: formations = [], isLoading } = useGetFormationsCatalogQuery()
@@ -84,9 +85,12 @@ export function TrainingFormationsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900">
+                    <Link
+                      to={`/training/formations/${formation.id}`}
+                      className="font-medium text-slate-900 hover:text-primary-700"
+                    >
                       {formation.titre ?? formation.nom}
-                    </p>
+                    </Link>
                     {formation.description && (
                       <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
                         {formation.description}
@@ -97,12 +101,18 @@ export function TrainingFormationsPage() {
                     {formation.slug}
                   </td>
                   <td className="px-4 py-3 text-slate-600">{formation.filiereNom ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{formation.niveau ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-600">{formatNiveauEtude(formation.niveau)}</td>
                   <td className="px-4 py-3 text-slate-600">
                     {formation.typeFormation ?? '—'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <Link
+                        to={`/training/formations/${formation.id}`}
+                        className="text-xs font-medium text-primary-600 hover:underline"
+                      >
+                        Contenu
+                      </Link>
                       <Link
                         to="/training/schedule"
                         className="text-xs font-medium text-primary-600 hover:underline"

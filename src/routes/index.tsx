@@ -28,17 +28,22 @@ import { TrainerMeetingsPage } from '@/pages/trainer/TrainerMeetingsPage'
 import { TrainerQuizzesPage } from '@/pages/trainer/TrainerQuizzesPage'
 import { TrainerSchedulePage } from '@/pages/trainer/TrainerSchedulePage'
 import { TrainerStudentsPage } from '@/pages/trainer/TrainerStudentsPage'
+import { StudentBulletinsPage } from '@/pages/student/StudentBulletinsPage'
+import { TrainerBulletinsPage } from '@/pages/trainer/TrainerBulletinsPage'
 import { TutorDashboardPage } from '@/pages/tutor/TutorDashboardPage'
 import { TrainingDashboardPage } from '@/pages/training/TrainingDashboardPage'
 import { TrainingSchedulePage } from '@/pages/training/TrainingSchedulePage'
 import { TrainingFormationsPage } from '@/pages/training/TrainingFormationsPage'
+import { TrainingFormationDetailPage } from '@/pages/training/TrainingFormationDetailPage'
 import { TrainingFilieresPage } from '@/pages/training/TrainingFilieresPage'
 import { TrainingFiliereDetailPage } from '@/pages/training/TrainingFiliereDetailPage'
 import { TrainingPromotionsPage } from '@/pages/training/TrainingPromotionsPage'
 import { TrainingStudentGroupsPage } from '@/pages/training/TrainingStudentGroupsPage'
-import { TrainingAcademicYearsPage } from '@/pages/training/TrainingAcademicYearsPage'
 import { TrainingTrainersPage } from '@/pages/training/TrainingTrainersPage'
 import { CareerDashboardPage } from '@/pages/career/CareerDashboardPage'
+import { CareerInternshipsPage } from '@/pages/career/CareerInternshipsPage'
+import { CareerPartnersPage } from '@/pages/career/CareerPartnersPage'
+import { CareerStatsPage } from '@/pages/career/CareerStatsPage'
 import { PlaceholderPage } from '@/components/shared/PlaceholderPage'
 import { UserRole } from '@/types/roles'
 
@@ -109,6 +114,7 @@ export function AppRoutes() {
             <Route index element={<Navigate to="formations" replace />} />
             <Route path="formations" element={<TrainerFormationsPage />} />
             <Route path="students" element={<TrainerStudentsPage />} />
+            <Route path="bulletins" element={<TrainerBulletinsPage />} />
             <Route
               path="formations/:id"
               element={<TrainerFormationDetailPage />}
@@ -157,9 +163,9 @@ export function AppRoutes() {
             <Route path="filieres" element={<TrainingFilieresPage />} />
             <Route path="filieres/:id" element={<TrainingFiliereDetailPage />} />
             <Route path="formations" element={<TrainingFormationsPage />} />
+            <Route path="formations/:id" element={<TrainingFormationDetailPage />} />
             <Route path="promotions" element={<TrainingPromotionsPage />} />
             <Route path="student-groups" element={<TrainingStudentGroupsPage />} />
-            <Route path="academic-years" element={<TrainingAcademicYearsPage />} />
             <Route path="schedule" element={<TrainingSchedulePage />} />
             <Route path="trainers" element={<TrainingTrainersPage />} />
           </Route>
@@ -171,33 +177,9 @@ export function AppRoutes() {
         >
           <Route path="/career" element={<CareerLayout />}>
             <Route index element={<CareerDashboardPage />} />
-            <Route
-              path="internships"
-              element={
-                <PlaceholderPage
-                  title="Stages"
-                  description="Enregistrement et suivi des stages étudiants"
-                />
-              }
-            />
-            <Route
-              path="partners"
-              element={
-                <PlaceholderPage
-                  title="Partenaires"
-                  description="Entreprises et conventions"
-                />
-              }
-            />
-            <Route
-              path="stats"
-              element={
-                <PlaceholderPage
-                  title="Statistiques"
-                  description="Auto-emploi et emploi salarié"
-                />
-              }
-            />
+            <Route path="internships" element={<CareerInternshipsPage />} />
+            <Route path="partners" element={<CareerPartnersPage />} />
+            <Route path="stats" element={<CareerStatsPage />} />
           </Route>
         </Route>
 
@@ -206,11 +188,12 @@ export function AppRoutes() {
           <Route path="/student" element={<StudentLayout />}>
             <Route index element={<Navigate to="dossier" replace />} />
             <Route path="dossier" element={<StudentDossierPage />} />
+            <Route path="bulletins" element={<StudentBulletinsPage />} />
             <Route path="emploi-du-temps" element={<StudentSchedulePage />} />
             <Route path="formations" element={<StudentFormationsPage />} />
-            <Route path="formations/:id" element={<StudentFormationDetailPage />} />
+            <Route path="formations/:slug" element={<StudentFormationDetailPage />} />
             <Route
-              path="formations/:id/quiz/:quizId"
+              path="formations/:slug/quiz/:quizId"
               element={<StudentQuizPage />}
             />
             <Route

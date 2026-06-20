@@ -36,7 +36,10 @@ export const baseApi = createApi({
     'StudentGroup',
     'Formateur',
     'Filiere',
-    'Student',
+    'Partner',
+    'Internship',
+    'Grade',
+    'Bulletin',
   ],
   endpoints: () => ({}),
 })

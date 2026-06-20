@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import { NavLink } from 'react-router-dom'
 import { ProfileDropdown } from '@/components/layout/ProfileDropdown'
+import { NavItemIcon } from '@/components/layout/NavItemIcon'
 import { APP_NAME } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { NavItem } from '@/routes/config/navConfig'
@@ -15,7 +16,7 @@ function StudentNavItem({ item }: { item: NavItem }) {
       to={item.path}
       className={({ isActive }) =>
         cn(
-          'shrink-0 px-4 py-3 text-sm font-medium transition-colors',
+          'flex shrink-0 items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors',
           'border-b-2 -mb-px',
           isActive
             ? 'border-primary-600 text-primary-700'
@@ -23,7 +24,8 @@ function StudentNavItem({ item }: { item: NavItem }) {
         )
       }
     >
-      {item.label}
+      <NavItemIcon icon={item.icon} className="h-4 w-4 shrink-0" />
+      <span>{item.label}</span>
     </NavLink>
   )
 }

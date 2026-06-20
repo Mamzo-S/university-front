@@ -5,8 +5,6 @@ import { Spinner } from '@/components/ui/Spinner'
 import {
   useCreatePromotionCatalogMutation,
   useDeletePromotionCatalogMutation,
-  useGetAcademicYearsQuery,
-  useGetFormationsCatalogQuery,
   useGetPromotionsCatalogQuery,
   useUpdatePromotionCatalogMutation,
   type PromotionCatalog,
@@ -16,8 +14,6 @@ import { ConfirmDialog } from '@/features/formations/components/ConfirmDialog'
 import { CrudActions } from '@/features/formations/components/CrudActions'
 
 export function TrainingPromotionsPage() {
-  const { data: formations = [] } = useGetFormationsCatalogQuery()
-  const { data: academicYears = [] } = useGetAcademicYearsQuery()
   const { data: promotions = [], isLoading } = useGetPromotionsCatalogQuery()
   const [createPromotion, { isLoading: creating }] = useCreatePromotionCatalogMutation()
   const [updatePromotion, { isLoading: updating }] = useUpdatePromotionCatalogMutation()
@@ -31,11 +27,10 @@ export function TrainingPromotionsPage() {
     <div>
       <PageHeader
         title="Promotions"
-        description="Classes et cohortes rattachées aux formations"
+        description="Cohortes et promotions (titre, slug, description)"
         actions={
           <Button
             size="sm"
-            disabled={formations.length === 0}
             onClick={() => {
               setEditing(undefined)
               setModalOpen(true)
@@ -45,12 +40,6 @@ export function TrainingPromotionsPage() {
           </Button>
         }
       />
-
-      {formations.length === 0 && (
-        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Créez d&apos;abord une formation avant d&apos;ajouter des promotions.
-        </p>
-      )}
 
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -67,30 +56,21 @@ export function TrainingPromotionsPage() {
               <tr className="border-b border-slate-100 bg-slate-50 text-left text-slate-500">
                 <th className="px-4 py-3 font-medium">Titre</th>
                 <th className="px-4 py-3 font-medium">Slug</th>
-                <th className="px-4 py-3 font-medium">Formation</th>
-                <th className="px-4 py-3 font-medium">Année</th>
+                <th className="px-4 py-3 font-medium">Description</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {promotions.map((promotion) => (
                 <tr key={promotion.id} className="hover:bg-slate-50/50">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900">
-                      {promotion.titre ?? promotion.nom}
-                    </p>
-                    {promotion.description && (
-                      <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
-                        {promotion.description}
-                      </p>
-                    )}
+                  <td className="px-4 py-3 font-medium text-slate-900">
+                    {promotion.titre ?? promotion.nom}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">
                     {promotion.slug}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{promotion.formationNom ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-600">
-                    {promotion.anneeAcademiqueTitre ?? promotion.anneeAcademique ?? '—'}
+                    {promotion.description ?? '—'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <CrudActions
@@ -114,8 +94,6 @@ export function TrainingPromotionsPage() {
           setModalOpen(false)
           setEditing(undefined)
         }}
-        formations={formations}
-        academicYears={academicYears}
         initial={editing}
         isSubmitting={creating || updating}
         onSubmit={async (values) => {

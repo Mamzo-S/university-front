@@ -1,5 +1,9 @@
 import { baseApi } from '@/app/api/baseApi'
 import type { BackendMembreResponse } from '@/features/admin/utils/personnelMappers'
+import type {
+  FormationProjectDeposit,
+  FormationSubModule,
+} from '@/types/formation'
 
 export interface FormationCatalog {
   id: number
@@ -51,6 +55,16 @@ export interface FormationCatalogInput {
   filiereId?: number
 }
 
+export interface FormationParcours {
+  managerName?: string
+  trainerName?: string
+  tutorName?: string
+  duration?: string
+  sessionUrl?: string
+  subModules: FormationSubModule[]
+  projectDeposits?: FormationProjectDeposit[]
+}
+
 export interface FiliereCatalog {
   id: number
   nom: string
@@ -68,8 +82,11 @@ export interface FiliereModuleSummary {
   id: number
   titre: string
   slug?: string
+  description?: string
+  imageUrl?: string
   niveau?: string
   typeFormation?: string
+  subModuleCount?: number
 }
 
 export interface FiliereEtudiantSummary {
@@ -91,9 +108,6 @@ export interface PromotionCatalogInput {
   titre: string
   slug?: string
   description?: string
-  formationId: number
-  anneeAcademiqueId?: number
-  anneeAcademique?: string
 }
 
 export interface AcademicYearInput {
@@ -128,6 +142,39 @@ export const catalogApi = baseApi.injectEndpoints({
     getFormationsCatalog: builder.query<FormationCatalog[], void>({
       query: () => '/formations',
       providesTags: ['Formation'],
+    }),
+    getFormationCatalog: builder.query<FormationCatalog, number>({
+      query: (id) => `/formations/${id}`,
+      providesTags: (_result, _error, id) => [{ type: 'Formation', id }],
+    }),
+    getFormationBySlug: builder.query<FormationCatalog, string>({
+      query: (slug) => `/formations/by-slug/${encodeURIComponent(slug)}`,
+      providesTags: (_result, _error, slug) => [{ type: 'Formation', id: `slug-${slug}` }],
+    }),
+    getFormationParcours: builder.query<FormationParcours, number>({
+      query: (id) => `/formations/${id}/parcours`,
+      providesTags: (_result, _error, id) => [{ type: 'Formation', id: `parcours-${id}` }],
+    }),
+    getFormationParcoursBySlug: builder.query<FormationParcours, string>({
+      query: (slug) => `/formations/by-slug/${encodeURIComponent(slug)}/parcours`,
+      providesTags: (_result, _error, slug) => [
+        { type: 'Formation', id: `parcours-slug-${slug}` },
+      ],
+    }),
+    updateFormationParcours: builder.mutation<
+      FormationParcours,
+      { id: number; body: FormationParcours }
+    >({
+      query: ({ id, body }) => ({
+        url: `/formations/${id}/parcours`,
+        method: 'PUT',
+        body,
+      }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Formation', id: `parcours-${id}` },
+        'Formation',
+        'Filiere',
+      ],
     }),
     createFormationCatalog: builder.mutation<FormationCatalog, FormationCatalogInput>({
       query: (body) => ({ url: '/formations', method: 'POST', body }),
@@ -266,6 +313,11 @@ export const catalogApi = baseApi.injectEndpoints({
 
 export const {
   useGetFormationsCatalogQuery,
+  useGetFormationCatalogQuery,
+  useGetFormationBySlugQuery,
+  useGetFormationParcoursQuery,
+  useGetFormationParcoursBySlugQuery,
+  useUpdateFormationParcoursMutation,
   useCreateFormationCatalogMutation,
   useUpdateFormationCatalogMutation,
   useDeleteFormationCatalogMutation,

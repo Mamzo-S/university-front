@@ -33,7 +33,7 @@ function toBackendMembre(
     grade: item.department,
     specialite: item.specialty,
     ine: item.ine,
-    anneeEntree: item.startYear,
+    niveau: item.niveauEtude,
     promotionNom: item.promotion,
     formationNom: item.program,
   }

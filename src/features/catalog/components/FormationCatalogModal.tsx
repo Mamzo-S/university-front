@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { NiveauSelect } from '@/components/ui/NiveauSelect'
 import type { FormationCatalog, FormationCatalogInput, FiliereCatalog } from '@/features/catalog/api/catalogApi'
 import { slugify } from '@/features/catalog/utils/slugify'
 import { FieldLabel, TextInput } from '@/features/formations/components/formFields'
@@ -20,7 +21,7 @@ const empty = (): FormationCatalogInput => ({
   slug: '',
   description: '',
   imageUrl: '',
-  niveau: '',
+  niveau: 'LICENCE_1',
   typeFormation: '',
   typeFinancement: '',
 })
@@ -44,7 +45,7 @@ export function FormationCatalogModal({
         slug: initial.slug ?? '',
         description: initial.description ?? '',
         imageUrl: initial.imageUrl ?? '',
-        niveau: initial.niveau ?? '',
+        niveau: initial.niveau ?? 'LICENCE_1',
         typeFormation: initial.typeFormation ?? '',
         typeFinancement: initial.typeFinancement ?? '',
         dateDebut: initial.dateDebut,
@@ -152,9 +153,10 @@ export function FormationCatalogModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <FieldLabel>Niveau</FieldLabel>
-            <TextInput
+            <NiveauSelect
               value={values.niveau ?? ''}
-              onChange={(e) => setValues((v) => ({ ...v, niveau: e.target.value }))}
+              onChange={(value) => setValues((v) => ({ ...v, niveau: value }))}
+              required
             />
           </div>
           <div>

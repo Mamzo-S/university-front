@@ -5,8 +5,8 @@ import type { SeanceInput } from '@/features/schedule/api/scheduleApi'
 import {
   DAY_OPTIONS,
   SEANCE_TYPE_OPTIONS,
-  type BackendCours,
   type BackendPromotion,
+  type FormationScheduleOption,
 } from '@/features/schedule/utils/scheduleMappers'
 import {
   FieldLabel,
@@ -30,8 +30,11 @@ export interface SeanceFormSubmit extends SeanceInput {
 interface SeanceFormModalProps {
   open: boolean
   onClose: () => void
-  promotion: BackendPromotion
-  cours: BackendCours[]
+  /** Promotion fixe (édition ou contexte unique). */
+  promotion?: BackendPromotion
+  /** Liste des promotions disponibles à la création. */
+  promotions?: BackendPromotion[]
+  formations: FormationScheduleOption[]
   formateurs: FormateurOption[]
   initial?: SeanceInput & { id?: number }
   onSubmit: (values: SeanceFormSubmit) => Promise<void>
@@ -39,7 +42,7 @@ interface SeanceFormModalProps {
 }
 
 const emptyForm = (promotionId: number): SeanceFormSubmit => ({
-  coursId: 0,
+  formationId: 0,
   formateurId: 0,
   promotionId,
   jourSemaine: 0,
@@ -55,34 +58,43 @@ export function SeanceFormModal({
   open,
   onClose,
   promotion,
-  cours,
+  promotions = [],
+  formations,
   formateurs,
   initial,
   onSubmit,
   isSubmitting = false,
 }: SeanceFormModalProps) {
-  const [values, setValues] = useState<SeanceFormSubmit>(() => emptyForm(promotion.id))
+  const promotionChoices = promotions.length > 0 ? promotions : promotion ? [promotion] : []
+  const defaultPromotionId = promotion?.id ?? promotionChoices[0]?.id ?? 0
+
+  const [values, setValues] = useState<SeanceFormSubmit>(() => emptyForm(defaultPromotionId))
   const [error, setError] = useState<string | null>(null)
   const isEditing = !!initial?.id
+  const showPromotionSelect = !isEditing && promotionChoices.length > 0
 
   useEffect(() => {
+    const choices = promotions.length > 0 ? promotions : promotion ? [promotion] : []
+    const promotionId =
+      initial?.promotionId ?? promotion?.id ?? choices[0]?.id ?? 0
+
     if (initial) {
       setValues({
-        ...emptyForm(promotion.id),
+        ...emptyForm(promotionId),
         ...initial,
-        promotionId: promotion.id,
+        promotionId,
         recurrente: true,
         joursRepetition: [],
       })
     } else {
       setValues({
-        ...emptyForm(promotion.id),
-        coursId: cours[0]?.id ?? 0,
+        ...emptyForm(promotionId),
+        formationId: formations[0]?.id ?? 0,
         formateurId: formateurs[0]?.id ?? 0,
       })
     }
     setError(null)
-  }, [initial, open, promotion.id, cours, formateurs])
+  }, [initial, open, promotion, promotions, formations, formateurs])
 
   const joursCibles = useMemo(() => {
     const days = new Set<number>([values.jourSemaine, ...values.joursRepetition])
@@ -106,8 +118,12 @@ export function SeanceFormModal({
     e.preventDefault()
     setError(null)
 
-    if (!values.coursId) {
-      setError('Choisissez un module. Créez-en un via « + Module » si la liste est vide.')
+    if (!values.formationId) {
+      setError('Choisissez une formation. Créez-en une via « + » si la liste est vide.')
+      return
+    }
+    if (!values.promotionId) {
+      setError('Choisissez une promotion (classe).')
       return
     }
     if (!values.formateurId) {
@@ -136,29 +152,55 @@ export function SeanceFormModal({
       onClose={onClose}
       title={isEditing ? 'Modifier la séance' : 'Ajouter une séance'}
     >
-      <p className="mb-3 text-xs text-slate-500">
-        Promotion : <strong>{promotion.nom}</strong>
-        {promotion.formationNom ? ` · ${promotion.formationNom}` : ''}
-      </p>
       {error && (
         <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
       )}
       <form onSubmit={handleSubmit} className="space-y-3">
+        {showPromotionSelect ? (
+          <div>
+            <FieldLabel>Promotion (classe)</FieldLabel>
+            <SelectInput
+              value={values.promotionId || ''}
+              onChange={(e) =>
+                setValues((v) => ({ ...v, promotionId: Number(e.target.value) }))
+              }
+              required
+            >
+              <option value="" disabled>
+                Choisir une promotion
+              </option>
+              {promotionChoices.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.titre ?? p.nom}
+                </option>
+              ))}
+            </SelectInput>
+          </div>
+        ) : (
+          promotion && (
+            <p className="text-xs text-slate-500">
+              Promotion : <strong>{promotion.titre ?? promotion.nom}</strong>
+              {promotion.formationNom ? ` · ${promotion.formationNom}` : ''}
+            </p>
+          )
+        )}
         <div>
-          <FieldLabel>Module (cours)</FieldLabel>
+          <FieldLabel>Formation</FieldLabel>
           <SelectInput
-            value={values.coursId || ''}
-            onChange={(e) => setValues((v) => ({ ...v, coursId: Number(e.target.value) }))}
+            value={values.formationId || ''}
+            onChange={(e) =>
+              setValues((v) => ({ ...v, formationId: Number(e.target.value) }))
+            }
             required
           >
             <option value="" disabled>
-              {cours.length === 0
-                ? 'Aucun module — créez-en un d\'abord'
-                : 'Choisir un module'}
+              {formations.length === 0
+                ? 'Aucune formation — créez-en une d\'abord'
+                : 'Choisir une formation'}
             </option>
-            {cours.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.code} — {c.nom}
+            {formations.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
               </option>
             ))}
           </SelectInput>
@@ -273,7 +315,7 @@ export function SeanceFormModal({
             <div>
               <FieldLabel>Répéter aussi sur</FieldLabel>
               <p className="mb-2 text-xs text-slate-500">
-                Duplique le même créneau sur d&apos;autres jours (module, enseignant, horaire
+                Duplique le même créneau sur d&apos;autres jours (formation, enseignant, horaire
                 identiques).
               </p>
               <div className="flex flex-wrap gap-1.5">

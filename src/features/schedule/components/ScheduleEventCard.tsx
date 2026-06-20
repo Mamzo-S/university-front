@@ -18,6 +18,7 @@ const typeStyles: Record<
 interface ScheduleEventCardProps {
   event: ScheduleEvent
   style: { top: number; height: number }
+  compact?: boolean
   interactive?: boolean
   draggable?: boolean
   isDragging?: boolean
@@ -29,6 +30,7 @@ interface ScheduleEventCardProps {
 export function ScheduleEventCard({
   event,
   style,
+  compact = false,
   interactive = false,
   draggable = false,
   isDragging = false,
@@ -37,9 +39,9 @@ export function ScheduleEventCard({
   onDragEnd,
 }: ScheduleEventCardProps) {
   const { accent, label } = typeStyles[event.type]
-  const isCompact = style.height < 56
-  const showMeta = style.height >= 72
-  const showTag = style.height >= 96
+  const isCompact = compact || style.height < 56
+  const showMeta = !compact && style.height >= 72
+  const showTag = !compact && style.height >= 96
 
   return (
     <div
@@ -90,7 +92,7 @@ export function ScheduleEventCard({
       role={interactive ? 'button' : undefined}
       tabIndex={interactive ? 0 : undefined}
     >
-      <div className="flex h-full flex-col gap-0.5 px-1.5 py-1">
+      <div className={cn('flex h-full flex-col gap-0.5', compact ? 'px-1 py-0.5' : 'px-1.5 py-1')}>
         <div className="flex items-center justify-between gap-1">
           <span className="truncate text-[8px] font-semibold uppercase tracking-wide opacity-70">
             {label}

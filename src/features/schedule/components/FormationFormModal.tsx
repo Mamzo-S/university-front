@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { NiveauSelect } from '@/components/ui/NiveauSelect'
 import type { FormationInput } from '@/features/schedule/api/scheduleApi'
 import { FieldLabel, TextInput } from '@/features/formations/components/formFields'
 import { getApiErrorMessage } from '@/features/admin/utils/apiError'
@@ -19,7 +20,7 @@ export function FormationFormModal({
   isSubmitting = false,
 }: FormationFormModalProps) {
   const [nom, setNom] = useState('')
-  const [niveau, setNiveau] = useState('')
+  const [niveau, setNiveau] = useState('LICENCE_1')
   const [typeFormation, setTypeFormation] = useState('Présentiel')
   const [typeFinancement, setTypeFinancement] = useState('État')
   const [dateDebut, setDateDebut] = useState('')
@@ -28,7 +29,7 @@ export function FormationFormModal({
 
   const reset = () => {
     setNom('')
-    setNiveau('')
+    setNiveau('LICENCE_1')
     setTypeFormation('Présentiel')
     setTypeFinancement('État')
     setDateDebut('')
@@ -81,11 +82,7 @@ export function FormationFormModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <FieldLabel>Niveau</FieldLabel>
-            <TextInput
-              value={niveau}
-              onChange={(e) => setNiveau(e.target.value)}
-              placeholder="Licence, Master…"
-            />
+            <NiveauSelect value={niveau} onChange={setNiveau} required />
           </div>
           <div>
             <FieldLabel>Type</FieldLabel>

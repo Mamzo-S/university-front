@@ -5,22 +5,22 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/features/formations/components/ConfirmDialog'
 import { CrudActions } from '@/features/formations/components/CrudActions'
 import {
-  useCreateCoursMutation,
-  useCreateFormationMutation,
-  useCreatePromotionMutation,
   useCreateSeanceMutation,
   useDeleteSeanceMutation,
   useGetAllSeancesQuery,
-  useGetBackendFormationsQuery,
-  useGetCoursByFormationQuery,
   useGetEmploiDuTempsByPromotionQuery,
   useGetFormateursQuery,
-  useGetPromotionsQuery,
   useUpdateSeanceMutation,
   type SeanceInput,
 } from '@/features/schedule/api/scheduleApi'
+import {
+  useCreateFormationCatalogMutation,
+  useCreatePromotionCatalogMutation,
+  useGetFilieresQuery,
+  useGetFormationsCatalogQuery,
+  useGetPromotionsCatalogQuery,
+} from '@/features/catalog/api/catalogApi'
 import { FormationFormModal } from '@/features/schedule/components/FormationFormModal'
-import { ModuleFormModal } from '@/features/schedule/components/ModuleFormModal'
 import { PromotionFormModal } from '@/features/schedule/components/PromotionFormModal'
 import { SeanceFormModal, type SeanceFormSubmit } from '@/features/schedule/components/SeanceFormModal'
 import { WeeklySchedule } from '@/features/schedule/components/WeeklySchedule'
@@ -29,14 +29,29 @@ import {
   mapFormateurOption,
   mapSeanceToScheduleEvent,
 } from '@/features/schedule/utils/scheduleMappers'
-import { MODULE_DRAG_TYPE, moveTimeRange } from '@/features/schedule/utils/scheduleUtils'
+import { FORMATION_DRAG_TYPE, moveTimeRange } from '@/features/schedule/utils/scheduleUtils'
 import type { BackendSeance } from '@/features/schedule/utils/scheduleMappers'
 import type { ScheduleEventMove, ScheduleSlotSelection } from '@/types/schedule'
+import { formatNiveauEtude, NIVEAU_ETUDE_OPTIONS } from '@/types/niveauEtude'
 import { cn } from '@/lib/utils'
 
+function formationLabel(
+  formation: { titre?: string; nom: string; filiereNom?: string; niveau?: string },
+) {
+  const title = formation.titre ?? formation.nom
+  const parts = [title]
+  if (formation.filiereNom) parts.push(formation.filiereNom)
+  if (formation.niveau) parts.push(formatNiveauEtude(formation.niveau))
+  return parts.join(' · ')
+}
+
 export function TrainingSchedulePage() {
-  const { data: formations = [], isLoading: formationsLoading } =
-    useGetBackendFormationsQuery()
+  const {
+    data: formations = [],
+    isLoading: formationsLoading,
+    isError: formationsError,
+  } = useGetFormationsCatalogQuery()
+  const { data: filieres = [] } = useGetFilieresQuery()
   const { data: formateurs = [] } = useGetFormateursQuery()
   const {
     data: allSeances = [],
@@ -44,36 +59,115 @@ export function TrainingSchedulePage() {
     isError: allSeancesError,
   } = useGetAllSeancesQuery()
 
-  const [formationId, setFormationId] = useState<number | null>(null)
+  const [filiereFilterId, setFiliereFilterId] = useState<number | null>(null)
+  const [niveauFilter, setNiveauFilter] = useState<string | null>(null)
+  const [formationFilterId, setFormationFilterId] = useState<number | null>(null)
   const [promotionId, setPromotionId] = useState<number | null>(null)
 
-  const selectedFormation = formations.find((f) => f.id === formationId)
-
-  const { data: promotions = [] } = useGetPromotionsQuery(
-    formationId ?? undefined,
-    { skip: !formationId },
+  const formationOptions = useMemo(
+    () =>
+      [...formations].sort((a, b) =>
+        (a.titre ?? a.nom).localeCompare(b.titre ?? b.nom, 'fr'),
+      ),
+    [formations],
   )
-  const selectedPromotion = promotions.find((p) => p.id === promotionId)
 
-  const { data: cours = [], isLoading: coursLoading } = useGetCoursByFormationQuery(
-    formationId!,
-    { skip: !formationId },
+  const filteredFormations = useMemo(() => {
+    return formationOptions.filter((f) => {
+      if (filiereFilterId != null && f.filiereId !== filiereFilterId) return false
+      if (niveauFilter && f.niveau !== niveauFilter) return false
+      return true
+    })
+  }, [formationOptions, filiereFilterId, niveauFilter])
+
+  const scopedFormations = useMemo(() => {
+    if (formationFilterId) {
+      return filteredFormations.filter((f) => f.id === formationFilterId)
+    }
+    return filteredFormations
+  }, [filteredFormations, formationFilterId])
+
+  const filteredFormationIds = useMemo(
+    () => new Set(scopedFormations.map((f) => f.id)),
+    [scopedFormations],
   )
+
+  const hasScopeFilters =
+    filiereFilterId != null || niveauFilter != null || formationFilterId != null
+
+  const filteredSeances = useMemo(() => {
+    if (!hasScopeFilters) return allSeances
+    return allSeances.filter((s) =>
+      s.formationId != null ? filteredFormationIds.has(s.formationId) : false,
+    )
+  }, [allSeances, hasScopeFilters, filteredFormationIds])
+
+  const handleFiliereFilterChange = (id: number | null) => {
+    setFiliereFilterId(id)
+    setFormationFilterId((current) => {
+      if (current == null) return null
+      const stillValid = formationOptions.some(
+        (f) =>
+          f.id === current &&
+          (id == null || f.filiereId === id) &&
+          (!niveauFilter || f.niveau === niveauFilter),
+      )
+      return stillValid ? current : null
+    })
+  }
+
+  const handleNiveauFilterChange = (niveau: string | null) => {
+    setNiveauFilter(niveau)
+    setFormationFilterId((current) => {
+      if (current == null) return null
+      const stillValid = formationOptions.some(
+        (f) =>
+          f.id === current &&
+          (filiereFilterId == null || f.filiereId === filiereFilterId) &&
+          (!niveau || f.niveau === niveau),
+      )
+      return stillValid ? current : null
+    })
+  }
+
+  const draggableFormations = scopedFormations
+
+  const formationScheduleOptions = useMemo(
+    () =>
+      filteredFormations.map((f) => ({
+        id: f.id,
+        label: formationLabel(f),
+      })),
+    [filteredFormations],
+  )
+
+  const selectedFormationFilter = formationOptions.find((f) => f.id === formationFilterId)
+  const selectedFiliereFilter = filieres.find((f) => f.id === filiereFilterId)
+
+  const { data: promotions = [] } = useGetPromotionsCatalogQuery()
+  const promotionOptions = useMemo(
+    () =>
+      [...promotions].sort((a, b) =>
+        (a.titre ?? a.nom).localeCompare(b.titre ?? b.nom, 'fr'),
+      ),
+    [promotions],
+  )
+  const selectedPromotion = promotionOptions.find((p) => p.id === promotionId)
+
   const { data: emploiDuTemps } = useGetEmploiDuTempsByPromotionQuery(promotionId!, {
     skip: !promotionId,
   })
 
-  const [createFormation, { isLoading: creatingFormation }] = useCreateFormationMutation()
+  const [createFormation, { isLoading: creatingFormation }] =
+    useCreateFormationCatalogMutation()
   const [createSeance, { isLoading: creatingSeance }] = useCreateSeanceMutation()
   const [updateSeance, { isLoading: updatingSeance }] = useUpdateSeanceMutation()
   const [deleteSeance] = useDeleteSeanceMutation()
-  const [createCours, { isLoading: creatingCours }] = useCreateCoursMutation()
   const [createPromotion, { isLoading: creatingPromotion }] =
-    useCreatePromotionMutation()
+    useCreatePromotionCatalogMutation()
 
   const [formationModalOpen, setFormationModalOpen] = useState(false)
   const [seanceModalOpen, setSeanceModalOpen] = useState(false)
-  const [moduleModalOpen, setModuleModalOpen] = useState(false)
   const [promotionModalOpen, setPromotionModalOpen] = useState(false)
   const [editingSeance, setEditingSeance] = useState<BackendSeance | undefined>()
   const [deletingSeance, setDeletingSeance] = useState<BackendSeance | undefined>()
@@ -84,32 +178,36 @@ export function TrainingSchedulePage() {
     [formateurs],
   )
 
-  const canPlanSeances =
-    !!promotionId && cours.length > 0 && formateurOptions.length > 0
+  const canInteractWithSchedule =
+    filteredFormations.length > 0 &&
+    formateurOptions.length > 0 &&
+    promotionOptions.length > 0
+
+  const canPlanSeances = canInteractWithSchedule
 
   const scheduleEvents = useMemo(
-    () => allSeances.map(mapSeanceToScheduleEvent),
-    [allSeances],
+    () => filteredSeances.map(mapSeanceToScheduleEvent),
+    [filteredSeances],
   )
 
   const promotionCount = useMemo(
-    () => new Set(allSeances.map((s) => s.promotionId)).size,
-    [allSeances],
+    () => new Set(filteredSeances.map((s) => s.promotionId)).size,
+    [filteredSeances],
   )
 
   const sortedSeances = useMemo(
     () =>
-      [...allSeances].sort((a, b) => {
+      [...filteredSeances].sort((a, b) => {
         if (a.jourSemaine !== b.jourSemaine) return a.jourSemaine - b.jourSemaine
         return a.heureDebut.localeCompare(b.heureDebut)
       }),
-    [allSeances],
+    [filteredSeances],
   )
 
   const seanceToInput = (seance: BackendSeance): SeanceInput & { id: number } => ({
     id: seance.id,
     emploiDuTempsId: seance.emploiDuTempsId,
-    coursId: seance.coursId,
+    formationId: seance.formationId,
     formateurId: seance.formateurId,
     promotionId: seance.promotionId,
     jourSemaine: seance.jourSemaine,
@@ -120,7 +218,7 @@ export function TrainingSchedulePage() {
   })
 
   const syncContextFromSeance = (seance: BackendSeance) => {
-    if (seance.formationId) setFormationId(seance.formationId)
+    if (seance.formationId) setFormationFilterId(seance.formationId)
     setPromotionId(seance.promotionId)
   }
 
@@ -141,15 +239,28 @@ export function TrainingSchedulePage() {
     setSeanceModalOpen(true)
   }
 
+  const defaultFormationId =
+    draggableFormations[0]?.id ?? filteredFormations[0]?.id
+
   const handleSlotSelect = (slot: ScheduleSlotSelection) => {
-    if (!canPlanSeances) return
+    if (!canInteractWithSchedule) return
+
+    const targetPromotionId =
+      promotionId ?? seanceDraft?.promotionId ?? promotionOptions[0]?.id
+
+    if (targetPromotionId == null) return
+
+    if (!promotionId) {
+      setPromotionId(targetPromotionId)
+    }
+
     openSeanceModal({
       jourSemaine: slot.dayOfWeek,
       heureDebut: slot.startTime,
       heureFin: slot.endTime,
-      coursId: slot.coursId ?? cours[0]?.id,
+      formationId: slot.formationId ?? defaultFormationId,
       formateurId: formateurOptions[0]?.id,
-      promotionId: promotionId!,
+      promotionId: targetPromotionId,
     })
   }
 
@@ -190,16 +301,26 @@ export function TrainingSchedulePage() {
 
   const handleSaveSeance = async (values: SeanceFormSubmit) => {
     const targetPromotionId =
-      selectedPromotion?.id ?? editingSeance?.promotionId ?? values.promotionId
+      values.promotionId ??
+      selectedPromotion?.id ??
+      editingSeance?.promotionId
+
+    if (!targetPromotionId) return
+
+    if (targetPromotionId !== promotionId) {
+      setPromotionId(targetPromotionId)
+    }
 
     const basePayload: SeanceInput = {
-      coursId: values.coursId,
+      formationId: values.formationId,
       formateurId: values.formateurId,
       promotionId: targetPromotionId,
       emploiDuTempsId:
-        emploiDuTemps?.id ||
-        editingSeance?.emploiDuTempsId ||
-        values.emploiDuTempsId,
+        targetPromotionId === promotionId
+          ? emploiDuTemps?.id ||
+            editingSeance?.emploiDuTempsId ||
+            values.emploiDuTempsId
+          : undefined,
       heureDebut: values.heureDebut,
       heureFin: values.heureFin,
       salle: values.salle,
@@ -234,8 +355,125 @@ export function TrainingSchedulePage() {
     <div>
       <PageHeader
         title="Emplois du temps"
-        description="Vue globale de toutes les séances — les filtres par formation ou promotion arrivent bientôt"
+        description="Planification des séances par filière, niveau et promotion"
       />
+
+      <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Filtres
+        </p>
+        {formationsError && (
+          <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+            Impossible de charger les formations.
+          </p>
+        )}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label className="text-xs font-medium text-slate-600">Filière</label>
+            <select
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+              value={filiereFilterId ?? ''}
+              onChange={(e) =>
+                handleFiliereFilterChange(e.target.value ? Number(e.target.value) : null)
+              }
+            >
+              <option value="">Toutes les filières</option>
+              {[...filieres]
+                .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'))
+                .map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.nom}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600">Niveau</label>
+            <select
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+              value={niveauFilter ?? ''}
+              onChange={(e) => handleNiveauFilterChange(e.target.value || null)}
+            >
+              <option value="">Tous les niveaux</option>
+              {NIVEAU_ETUDE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600">Module (formation)</label>
+            <select
+              className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+              value={formationFilterId ?? ''}
+              onChange={(e) =>
+                setFormationFilterId(e.target.value ? Number(e.target.value) : null)
+              }
+              disabled={filteredFormations.length === 0}
+            >
+              <option value="">
+                {filteredFormations.length === 0
+                  ? 'Aucun module pour ce périmètre'
+                  : 'Tous les modules'}
+              </option>
+              {filteredFormations.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {formationLabel(f)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600">Promotion (classe)</label>
+            <div className="mt-1 flex gap-2">
+              <select
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                value={promotionId ?? ''}
+                onChange={(e) =>
+                  setPromotionId(e.target.value ? Number(e.target.value) : null)
+                }
+              >
+                <option value="">Choisir une promotion</option>
+                {promotionOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.titre ?? p.nom}
+                  </option>
+                ))}
+              </select>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPromotionModalOpen(true)}
+              >
+                +
+              </Button>
+            </div>
+          </div>
+        </div>
+        {hasScopeFilters && (
+          <p className="mt-3 text-xs text-slate-500">
+            {filteredSeances.length} séance{filteredSeances.length !== 1 ? 's' : ''} ·{' '}
+            {scopedFormations.length} module{scopedFormations.length !== 1 ? 's' : ''}
+            {selectedFiliereFilter ? ` · ${selectedFiliereFilter.nom}` : ''}
+            {niveauFilter ? ` · ${formatNiveauEtude(niveauFilter)}` : ''}
+          </p>
+        )}
+        {promotionId && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              onClick={() => openSeanceModal({ promotionId })}
+              disabled={!canPlanSeances}
+            >
+              + Séance
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setFormationModalOpen(true)}>
+              + Module
+            </Button>
+          </div>
+        )}
+      </div>
 
       <div className="mb-4">
         <WeeklySchedule
@@ -243,8 +481,12 @@ export function TrainingSchedulePage() {
           editable
           canPlan={canPlanSeances}
           isLoading={allSeancesLoading}
-          statsLabel={`${allSeances.length} séance${allSeances.length !== 1 ? 's' : ''} · ${promotionCount} promotion${promotionCount !== 1 ? 's' : ''}`}
-          emptyMessage="Aucune séance planifiée. Sélectionnez une promotion pour en ajouter."
+          statsLabel={`${filteredSeances.length} séance${filteredSeances.length !== 1 ? 's' : ''} · ${promotionCount} promotion${promotionCount !== 1 ? 's' : ''}`}
+          emptyMessage={
+            hasScopeFilters
+              ? 'Aucune séance pour cette filière / ce niveau. Ajustez les filtres ou planifiez une séance.'
+              : 'Aucune séance planifiée. Sélectionnez une promotion pour en ajouter.'
+          }
           onSlotSelect={handleSlotSelect}
           onEventClick={handleEventClick}
           onEventMove={handleEventMove}
@@ -256,91 +498,16 @@ export function TrainingSchedulePage() {
         )}
       </div>
 
-      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Planifier dans (filtres à venir)
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="text-xs font-medium text-slate-600">Formation</label>
-            <div className="mt-1 flex gap-2">
-              <select
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                value={formationId ?? ''}
-                onChange={(e) => {
-                  const id = e.target.value ? Number(e.target.value) : null
-                  setFormationId(id)
-                  setPromotionId(null)
-                }}
-              >
-                <option value="">Toutes les formations</option>
-                {formations.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.nom}
-                  </option>
-                ))}
-              </select>
-              <Button size="sm" variant="outline" onClick={() => setFormationModalOpen(true)}>
-                +
-              </Button>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-600">Promotion (classe)</label>
-            <div className="mt-1 flex gap-2">
-              <select
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                value={promotionId ?? ''}
-                disabled={!formationId}
-                onChange={(e) =>
-                  setPromotionId(e.target.value ? Number(e.target.value) : null)
-                }
-              >
-                <option value="">
-                  {formationId ? 'Choisir une promotion' : 'Choisir une formation d\'abord'}
-                </option>
-                {promotions.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nom}
-                  </option>
-                ))}
-              </select>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!formationId}
-                onClick={() => setPromotionModalOpen(true)}
-              >
-                +
-              </Button>
-            </div>
-          </div>
-        </div>
-        {formationId && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => setModuleModalOpen(true)}>
-              + Module
-            </Button>
-            {promotionId && (
-              <Button
-                size="sm"
-                onClick={() => openSeanceModal({ promotionId })}
-                disabled={!canPlanSeances}
-              >
-                + Séance
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="text-sm font-semibold text-slate-900">
-            Toutes les séances ({allSeances.length})
+            Séances ({filteredSeances.length}
+            {hasScopeFilters ? '' : ` / ${allSeances.length}`})
           </h2>
           <p className="mb-3 text-xs text-slate-500">
-            Liste complète — triée par jour et horaire
+            {hasScopeFilters
+              ? 'Liste filtrée par filière, niveau ou module'
+              : 'Liste complète — triée par jour et horaire'}
           </p>
           {allSeancesLoading ? (
             <Spinner />
@@ -355,7 +522,7 @@ export function TrainingSchedulePage() {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-slate-800">
-                      {seance.coursNom}
+                      {seance.formationNom || seance.coursNom}
                     </p>
                     <p className="mt-0.5 text-xs text-slate-500">
                       {DAY_OPTIONS[seance.jourSemaine]?.label}{' '}
@@ -384,29 +551,28 @@ export function TrainingSchedulePage() {
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-900">Modules à glisser</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Formations à glisser</h2>
           <p className="mb-3 text-xs text-slate-500">
-            {formationId
-              ? `Formation : ${selectedFormation?.nom}`
-              : 'Sélectionnez une formation pour voir ses modules'}
+            {formationFilterId
+              ? `Filtre : ${selectedFormationFilter ? formationLabel(selectedFormationFilter) : '—'}`
+              : `${draggableFormations.length} module${draggableFormations.length !== 1 ? 's' : ''} dans le périmètre`}
           </p>
-          {!formationId ? (
-            <p className="text-sm text-slate-500">
-              Choisissez une formation dans le panneau ci-dessus.
+          {filteredFormations.length === 0 && hasScopeFilters && (
+            <p className="mb-3 text-sm text-amber-700">
+              Aucun module pour cette filière et ce niveau. Créez-en un ou élargissez les filtres.
             </p>
-          ) : coursLoading ? (
-            <Spinner />
-          ) : cours.length === 0 ? (
-            <p className="text-sm text-amber-700">Aucun module pour cette formation.</p>
+          )}
+          {formationOptions.length === 0 ? (
+            <p className="text-sm text-amber-700">Aucune formation dans le catalogue.</p>
           ) : (
             <ul className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
-              {cours.map((module) => (
-                <li key={module.id}>
+              {draggableFormations.map((formation) => (
+                <li key={formation.id}>
                   <div
                     draggable={canPlanSeances}
                     onDragStart={(e) => {
-                      e.dataTransfer.setData(MODULE_DRAG_TYPE, String(module.id))
-                      e.dataTransfer.setData('text/plain', String(module.id))
+                      e.dataTransfer.setData(FORMATION_DRAG_TYPE, String(formation.id))
+                      e.dataTransfer.setData('text/plain', String(formation.id))
                       e.dataTransfer.effectAllowed = 'copy'
                     }}
                     className={cn(
@@ -416,10 +582,16 @@ export function TrainingSchedulePage() {
                         : 'opacity-50',
                     )}
                   >
-                    <span className="font-medium text-slate-800">{module.nom}</span>
-                    <span className="mt-0.5 block text-[10px] text-slate-500">
-                      {module.code} · {module.semestre}
+                    <span className="font-medium text-slate-800">
+                      {formation.titre ?? formation.nom}
                     </span>
+                    {(formation.filiereNom || formation.niveau) && (
+                      <span className="mt-0.5 block text-[10px] text-slate-500">
+                        {[formation.filiereNom, formation.niveau && formatNiveauEtude(formation.niveau)]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    )}
                   </div>
                 </li>
               ))}
@@ -433,7 +605,7 @@ export function TrainingSchedulePage() {
         </div>
       </div>
 
-      {formations.length === 0 && (
+      {formationOptions.length === 0 && !formationsLoading && (
         <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center">
           <Button size="sm" onClick={() => setFormationModalOpen(true)}>
             + Créer une formation
@@ -446,13 +618,30 @@ export function TrainingSchedulePage() {
         onClose={() => setFormationModalOpen(false)}
         isSubmitting={creatingFormation}
         onSubmit={async (values) => {
-          const created = await createFormation(values).unwrap()
-          setFormationId(created.id)
-          setPromotionId(null)
+          const created = await createFormation({
+            titre: values.nom,
+            niveau: values.niveau ?? niveauFilter ?? undefined,
+            typeFormation: values.typeFormation,
+            typeFinancement: values.typeFinancement,
+            dateDebut: values.dateDebut,
+            dateFin: values.dateFin,
+            filiereId: filiereFilterId ?? undefined,
+          }).unwrap()
+          setFormationFilterId(created.id)
         }}
       />
 
-      {modalPromotion && (
+      <PromotionFormModal
+        open={promotionModalOpen}
+        onClose={() => setPromotionModalOpen(false)}
+        onSubmit={async (values) => {
+          const created = await createPromotion(values).unwrap()
+          setPromotionId(created.id)
+        }}
+        isSubmitting={creatingPromotion}
+      />
+
+      {seanceModalOpen && canInteractWithSchedule && (
         <SeanceFormModal
           open={seanceModalOpen}
           onClose={() => {
@@ -460,8 +649,9 @@ export function TrainingSchedulePage() {
             setEditingSeance(undefined)
             setSeanceDraft(undefined)
           }}
-          promotion={modalPromotion}
-          cours={cours}
+          promotion={editingSeance ? modalPromotion : selectedPromotion}
+          promotions={promotionOptions}
+          formations={formationScheduleOptions}
           formateurs={formateurOptions}
           initial={
             editingSeance
@@ -474,7 +664,8 @@ export function TrainingSchedulePage() {
                     heureDebut: seanceDraft.heureDebut ?? '08:00',
                     heureFin: seanceDraft.heureFin ?? '10:00',
                     typeSeance: seanceDraft.typeSeance ?? 'COURS',
-                    coursId: seanceDraft.coursId ?? cours[0]?.id ?? 0,
+                    formationId:
+                      seanceDraft.formationId ?? defaultFormationId ?? 0,
                     formateurId: seanceDraft.formateurId ?? formateurOptions[0]?.id ?? 0,
                   }
                 : undefined
@@ -484,36 +675,10 @@ export function TrainingSchedulePage() {
         />
       )}
 
-      {selectedFormation && formationId && (
-        <>
-          <ModuleFormModal
-            open={moduleModalOpen}
-            onClose={() => setModuleModalOpen(false)}
-            formationId={formationId}
-            formationNom={selectedFormation.nom}
-            onSubmit={async (values) => {
-              await createCours(values).unwrap()
-            }}
-            isSubmitting={creatingCours}
-          />
-          <PromotionFormModal
-            open={promotionModalOpen}
-            onClose={() => setPromotionModalOpen(false)}
-            formationId={formationId}
-            formationNom={selectedFormation.nom}
-            onSubmit={async (values) => {
-              const created = await createPromotion(values).unwrap()
-              setPromotionId(created.id)
-            }}
-            isSubmitting={creatingPromotion}
-          />
-        </>
-      )}
-
       <ConfirmDialog
         open={!!deletingSeance}
         title="Supprimer la séance"
-        message={`Retirer « ${deletingSeance?.coursNom} » de l'emploi du temps ?`}
+        message={`Retirer « ${deletingSeance?.formationNom || deletingSeance?.coursNom} » de l'emploi du temps ?`}
         onConfirm={async () => {
           if (deletingSeance) {
             await deleteSeance(deletingSeance.id).unwrap()

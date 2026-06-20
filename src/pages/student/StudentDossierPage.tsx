@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useGetStudentQuery } from '@/features/students/api/studentsApi'
+import { formatNiveauEtude } from '@/types/niveauEtude'
 
 export function StudentDossierPage() {
   const { user } = useAuth()
@@ -27,8 +28,7 @@ export function StudentDossierPage() {
     { label: 'Date de naissance', value: student.birthDate },
     { label: 'Formation', value: student.formation },
     { label: 'Promotion', value: student.promotion },
-    { label: 'Année de début', value: student.startYear },
-    { label: 'Année de sortie', value: student.endYear ?? 'En cours' },
+    { label: 'Niveau', value: formatNiveauEtude(student.niveauEtude) },
     { label: 'E-mail', value: user?.email ?? student.email },
   ]
 

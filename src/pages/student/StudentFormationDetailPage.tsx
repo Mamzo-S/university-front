@@ -1,10 +1,10 @@
 import { Link, useParams } from 'react-router-dom'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Spinner } from '@/components/ui/Spinner'
 import { ProjectDepositPanel } from '@/features/formations/components/ProjectDepositPanel'
 import { SubModulePanel } from '@/features/formations/components/SubModulePanel'
-import { useAppSelector } from '@/app/hooks'
-import { selectFormationById } from '@/features/formations/slice/formationsSlice'
+import { useStudentFormation } from '@/features/formations/hooks/useStudentFormation'
 import { getInitials } from '@/lib/utils'
 
 function TeamMember({ role, name }: { role: string; name: string }) {
@@ -23,12 +23,18 @@ function TeamMember({ role, name }: { role: string; name: string }) {
 }
 
 export function StudentFormationDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const formation = useAppSelector((state) =>
-    id ? selectFormationById(state, id) : undefined,
-  )
+  const { slug } = useParams<{ slug: string }>()
+  const { formation, isLoading, isError } = useStudentFormation(slug)
 
-  if (!formation) {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Spinner size="lg" />
+      </div>
+    )
+  }
+
+  if (isError || !formation || !slug?.trim()) {
     return (
       <div className="rounded-lg border border-slate-100 bg-white p-6 text-center shadow-sm">
         <p className="text-sm text-slate-500">Formation introuvable.</p>
@@ -43,7 +49,9 @@ export function StudentFormationDetailPage() {
   }
 
   const handleJoinSession = () => {
-    window.open(formation.sessionUrl, '_blank', 'noopener,noreferrer')
+    if (formation.sessionUrl && formation.sessionUrl !== '#') {
+      window.open(formation.sessionUrl, '_blank', 'noopener,noreferrer')
+    }
   }
 
   return (
@@ -62,7 +70,6 @@ export function StudentFormationDetailPage() {
         Retour
       </Link>
 
-      {/* Bannière */}
       <div className="relative w-full overflow-hidden rounded-md">
         <img
           src={formation.imageUrl}
@@ -83,34 +90,22 @@ export function StudentFormationDetailPage() {
               </h1>
             </div>
 
-            <Button
-              size="sm"
-              onClick={handleJoinSession}
-              className="animate-join-pulse shrink-0 bg-white text-slate-900 transition-transform hover:scale-105 hover:bg-slate-100 hover:animate-none"
-            >
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
+            {formation.sessionUrl && formation.sessionUrl !== '#' && (
+              <Button
+                size="sm"
+                onClick={handleJoinSession}
+                className="animate-join-pulse shrink-0 bg-white text-slate-900 transition-transform hover:scale-105 hover:bg-slate-100 hover:animate-none"
               >
-                <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
-                <rect x="2" y="6" width="14" height="12" rx="2" />
-              </svg>
-              Rejoindre
-            </Button>
+                Rejoindre
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Infos compactes */}
       <div className="mt-4 rounded-xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
         <p className="line-clamp-3 text-sm leading-relaxed text-slate-600">
-          {formation.description}
+          {formation.description || 'Aucune description.'}
         </p>
 
         <div className="mt-4 grid grid-cols-1 gap-4 border-t border-slate-100 pt-4 sm:grid-cols-3">
@@ -123,8 +118,6 @@ export function StudentFormationDetailPage() {
           <span>{formation.duration}</span>
           <span className="text-slate-300">·</span>
           <span>{formation.subModules.length} sous-modules</span>
-          <span className="text-slate-300">·</span>
-          <span className="text-slate-400">Session avec {formation.tutorName}</span>
         </div>
       </div>
 
@@ -134,19 +127,24 @@ export function StudentFormationDetailPage() {
         </div>
       )}
 
-      {/* Sous-modules */}
       <div className="mt-5">
         <h2 className="mb-3 text-base font-semibold text-slate-900">Sous-modules</h2>
-        <div className="space-y-3">
-          {formation.subModules.map((sub, index) => (
-            <SubModulePanel
-              key={sub.id}
-              subModule={sub}
-              formationId={formation.id}
-              defaultOpen={index === 0}
-            />
-          ))}
-        </div>
+        {formation.subModules.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-400">
+            Aucun sous-module disponible pour le moment.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {formation.subModules.map((sub, index) => (
+              <SubModulePanel
+                key={sub.id}
+                subModule={sub}
+                formationId={formation.id}
+                defaultOpen={index === 0}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -29,7 +29,7 @@ export interface AdminPersonnel {
   dateOfBirth?: string
   program?: string
   promotion?: string
-  startYear?: number
+  niveauEtude?: string
   partnerZone?: string
 }
 
@@ -168,11 +168,11 @@ const STUDENT_PERSONNEL: AdminPersonnel[] = MOCK_STUDENTS.map((s) => ({
   role: UserRole.STUDENT,
   category: 'etudiant' as const,
   status: 'active' as const,
-  joinedAt: `${s.startYear}-09-01`,
+  joinedAt: '2024-09-01',
   ine: s.ine,
   program: s.formation,
   promotion: s.promotion,
-  startYear: s.startYear,
+  niveauEtude: s.niveauEtude,
 }))
 
 export const MOCK_ADMIN_PERSONNEL: AdminPersonnel[] = [

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { NiveauSelect } from '@/components/ui/NiveauSelect'
 import { getCategoryConfig } from '@/features/admin/config/personnelCategories'
 import {
   FieldLabel,
@@ -52,7 +53,7 @@ function emptyForm(category: PersonnelCategory): FormState {
     dateOfBirth: '',
     program: '',
     promotion: '',
-    startYear: new Date().getFullYear(),
+    niveauEtude: 'LICENCE_1',
     partnerZone: '',
   }
 }
@@ -110,7 +111,7 @@ export function PersonnelCategoryFormModal({
       dateOfBirth: values.dateOfBirth || undefined,
       program: values.program || undefined,
       promotion: values.promotion || undefined,
-      startYear: values.startYear,
+      niveauEtude: values.niveauEtude,
       partnerZone: values.partnerZone || undefined,
     }
 
@@ -322,19 +323,10 @@ export function PersonnelCategoryFormModal({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <FieldLabel>Année d&apos;entrée</FieldLabel>
-                <TextInput
-                  type="number"
-                  value={values.startYear ?? ''}
-                  onChange={(e) =>
-                    set(
-                      'startYear',
-                      e.target.value === ''
-                        ? new Date().getFullYear()
-                        : Number(e.target.value),
-                    )
-                  }
-                  placeholder="Ex. 2024"
+                <FieldLabel>Niveau</FieldLabel>
+                <NiveauSelect
+                  value={values.niveauEtude ?? ''}
+                  onChange={(value) => set('niveauEtude', value)}
                   required
                 />
               </div>

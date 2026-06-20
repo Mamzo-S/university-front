@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
+import { NiveauSelect } from '@/components/ui/NiveauSelect'
 import type { FiliereCatalog, PromotionCatalog } from '@/features/catalog/api/catalogApi'
 import { FieldLabel, TextInput } from '@/features/formations/components/formFields'
 import type { StudentCreateInput } from '@/features/students/api/studentsApi'
@@ -11,7 +12,6 @@ interface StudentCreateModalProps {
   onClose: () => void
   filieres: FiliereCatalog[]
   promotions: PromotionCatalog[]
-  moduleOptions: { id: number; filiereId?: number }[]
   onSubmit: (values: StudentCreateInput) => Promise<void>
   isSubmitting?: boolean
 }
@@ -23,7 +23,7 @@ const empty = (): StudentCreateInput => ({
   prenom: '',
   ine: '',
   dateNaissance: '',
-  anneeEntree: new Date().getFullYear(),
+  niveau: 'LICENCE_1',
   filiereId: 0,
 })
 
@@ -32,7 +32,6 @@ export function StudentCreateModal({
   onClose,
   filieres,
   promotions,
-  moduleOptions,
   onSubmit,
   isSubmitting = false,
 }: StudentCreateModalProps) {
@@ -46,14 +45,10 @@ export function StudentCreateModal({
 
   const promotionOptions = useMemo(
     () =>
-      [...promotions]
-        .filter((promotion) => {
-          if (promotion.formationId == null) return false
-          const module = moduleOptions.find((item) => item.id === promotion.formationId)
-          return module?.filiereId === values.filiereId
-        })
-        .sort((a, b) => (a.titre ?? a.nom).localeCompare(b.titre ?? b.nom, 'fr')),
-    [promotions, moduleOptions, values.filiereId],
+      [...promotions].sort((a, b) =>
+        (a.titre ?? a.nom).localeCompare(b.titre ?? b.nom, 'fr'),
+      ),
+    [promotions],
   )
 
   useEffect(() => {
@@ -69,6 +64,10 @@ export function StudentCreateModal({
     setError(null)
     if (!values.filiereId) {
       setError('Sélectionnez une filière.')
+      return
+    }
+    if (!values.niveau) {
+      setError('Sélectionnez un niveau.')
       return
     }
     try {
@@ -156,16 +155,11 @@ export function StudentCreateModal({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <FieldLabel>Année d&apos;entrée</FieldLabel>
-              <TextInput
-                type="number"
-                value={values.anneeEntree ?? ''}
-                onChange={(e) =>
-                  setValues((v) => ({
-                    ...v,
-                    anneeEntree: e.target.value ? Number(e.target.value) : undefined,
-                  }))
-                }
+              <FieldLabel>Niveau</FieldLabel>
+              <NiveauSelect
+                value={values.niveau}
+                onChange={(value) => setValues((v) => ({ ...v, niveau: value }))}
+                required
               />
             </div>
             <div>

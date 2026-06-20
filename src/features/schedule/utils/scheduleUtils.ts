@@ -1,11 +1,28 @@
 const SLOT_HEIGHT = 44
+const COMPACT_SLOT_HEIGHT = 30
 const START_HOUR = 8
 const END_HOUR = 17
 
-export const SCHEDULE_CONFIG = {
+export type ScheduleGridConfig = {
+  slotHeight: number
+  startHour: number
+  endHour: number
+}
+
+export const SCHEDULE_CONFIG: ScheduleGridConfig = {
   slotHeight: SLOT_HEIGHT,
   startHour: START_HOUR,
   endHour: END_HOUR,
+}
+
+export const COMPACT_SCHEDULE_CONFIG: ScheduleGridConfig = {
+  slotHeight: COMPACT_SLOT_HEIGHT,
+  startHour: START_HOUR,
+  endHour: END_HOUR,
+}
+
+function resolveConfig(config?: ScheduleGridConfig) {
+  return config ?? SCHEDULE_CONFIG
 }
 
 export function timeToMinutes(time: string) {
@@ -20,17 +37,20 @@ export function minutesToTime(minutes: number) {
 }
 
 /** Index de créneau 30 min depuis le début de la grille (8h). */
-export function yOffsetToSlotIndex(y: number) {
-  const maxSlot = (END_HOUR - START_HOUR) * 2 - 1
-  return Math.max(0, Math.min(Math.floor(y / SLOT_HEIGHT), maxSlot))
+export function yOffsetToSlotIndex(y: number, config?: ScheduleGridConfig) {
+  const { slotHeight, startHour, endHour } = resolveConfig(config)
+  const maxSlot = (endHour - startHour) * 2 - 1
+  return Math.max(0, Math.min(Math.floor(y / slotHeight), maxSlot))
 }
 
 export function slotIndexToTimeRange(
   slotIndex: number,
   durationMinutes = 120,
+  config?: ScheduleGridConfig,
 ) {
-  const gridStart = START_HOUR * 60
-  const gridEnd = END_HOUR * 60
+  const { startHour, endHour } = resolveConfig(config)
+  const gridStart = startHour * 60
+  const gridEnd = endHour * 60
   const startMinutes = gridStart + slotIndex * 30
   const endMinutes = Math.min(startMinutes + durationMinutes, gridEnd)
 
@@ -40,7 +60,9 @@ export function slotIndexToTimeRange(
   }
 }
 
-export const MODULE_DRAG_TYPE = 'application/x-schedule-module-id'
+export const FORMATION_DRAG_TYPE = 'application/x-schedule-formation-id'
+/** @deprecated Utiliser FORMATION_DRAG_TYPE */
+export const MODULE_DRAG_TYPE = FORMATION_DRAG_TYPE
 export const SEANCE_DRAG_TYPE = 'application/x-schedule-seance-id'
 
 /** Déplace un créneau en conservant sa durée. */
@@ -58,20 +80,26 @@ export function moveTimeRange(
   }
 }
 
-export function getEventPosition(startTime: string, endTime: string) {
+export function getEventPosition(
+  startTime: string,
+  endTime: string,
+  config?: ScheduleGridConfig,
+) {
+  const { slotHeight, startHour } = resolveConfig(config)
   const startMinutes = timeToMinutes(startTime)
   const endMinutes = timeToMinutes(endTime)
-  const gridStart = START_HOUR * 60
+  const gridStart = startHour * 60
 
-  const top = ((startMinutes - gridStart) / 30) * SLOT_HEIGHT
-  const height = ((endMinutes - startMinutes) / 30) * SLOT_HEIGHT
+  const top = ((startMinutes - gridStart) / 30) * slotHeight
+  const height = ((endMinutes - startMinutes) / 30) * slotHeight
 
   return { top, height }
 }
 
-export function generateTimeSlots() {
+export function generateTimeSlots(config?: ScheduleGridConfig) {
+  const { startHour, endHour } = resolveConfig(config)
   const slots: string[] = []
-  for (let hour = START_HOUR; hour < END_HOUR; hour++) {
+  for (let hour = startHour; hour < endHour; hour++) {
     slots.push(`${hour.toString().padStart(2, '0')}:00`)
     slots.push(`${hour.toString().padStart(2, '0')}:30`)
   }
@@ -107,15 +135,16 @@ export function isSameDay(a: Date, b: Date) {
   )
 }
 
-export function getNowLinePosition() {
+export function getNowLinePosition(config?: ScheduleGridConfig) {
+  const { slotHeight, startHour, endHour } = resolveConfig(config)
   const now = new Date()
   const minutes = now.getHours() * 60 + now.getMinutes()
-  const gridStart = START_HOUR * 60
-  const gridEnd = END_HOUR * 60
+  const gridStart = startHour * 60
+  const gridEnd = endHour * 60
 
   if (minutes < gridStart || minutes > gridEnd) return null
 
-  const top = ((minutes - gridStart) / 30) * SLOT_HEIGHT
+  const top = ((minutes - gridStart) / 30) * slotHeight
   const label = now.toLocaleTimeString('fr-FR', {
     hour: '2-digit',
     minute: '2-digit',

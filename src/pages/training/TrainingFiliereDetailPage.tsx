@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Spinner } from '@/components/ui/Spinner'
 import { useGetFiliereDetailQuery } from '@/features/catalog/api/catalogApi'
+import { formatNiveauEtude } from '@/types/niveauEtude'
 
 export function TrainingFiliereDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -85,7 +86,7 @@ export function TrainingFiliereDetailPage() {
                         <p className="font-mono text-[11px] text-slate-400">/{module.slug}</p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{module.niveau ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-600">{formatNiveauEtude(module.niveau)}</td>
                     <td className="px-4 py-3 text-slate-600">{module.typeFormation ?? '—'}</td>
                   </tr>
                 ))}

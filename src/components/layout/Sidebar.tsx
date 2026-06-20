@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { NavItemIcon } from '@/components/layout/NavItemIcon'
 import { cn } from '@/lib/utils'
 import type { NavItem } from '@/routes/config/navConfig'
 
@@ -27,14 +28,15 @@ export function Sidebar({ title, subtitle, items }: SidebarProps) {
             end={item.path.split('/').length <= 2}
             className={({ isActive }) =>
               cn(
-                'block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 isActive
                   ? 'bg-sidebar-active text-white'
                   : 'text-slate-300 hover:bg-sidebar-hover hover:text-white',
               )
             }
           >
-            {item.label}
+            <NavItemIcon icon={item.icon} />
+            <span>{item.label}</span>
           </NavLink>
         ))}
       </nav>

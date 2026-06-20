@@ -44,7 +44,7 @@ export interface ScheduleSlotSelection {
   dayOfWeek: number
   startTime: string
   endTime: string
-  coursId?: number
+  formationId?: number
 }
 
 export interface ScheduleEventMove {

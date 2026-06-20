@@ -30,6 +30,11 @@ export type BackendPromotion = ClassePromotion & {
 
 export type BackendCours = ModuleCours
 
+export type FormationScheduleOption = {
+  id: number
+  label: string
+}
+
 export type BackendSeance = SeancePlanifiee
 
 export type BackendEmploiDuTemps = EmploiDuTemps
@@ -62,7 +67,7 @@ export function mapSeanceToScheduleEvent(seance: SeancePlanifiee): ScheduleEvent
 
   return {
     id: String(seance.id),
-    title: seance.coursNom,
+    title: seance.formationNom || seance.coursNom,
     type,
     dayOfWeek: seance.jourSemaine,
     startTime: seance.heureDebut.slice(0, 5),
@@ -75,7 +80,7 @@ export function mapSeanceToScheduleEvent(seance: SeancePlanifiee): ScheduleEvent
       : seance.promotionNom,
     isRecurring: true,
     tag: {
-      label: seance.promotionNom,
+      label: seance.formationNom || seance.promotionNom,
       variant: 'blue',
     },
     colorClass: promotionColorClass(seance.promotionId),

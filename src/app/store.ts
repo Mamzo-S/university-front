@@ -1,6 +1,8 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit'
 import '@/features/catalog/api/catalogApi'
 import '@/features/students/api/studentsApi'
+import '@/features/career/api/careerApi'
+import '@/features/grades/api/gradesApi'
 import {
   FLUSH,
   PAUSE,

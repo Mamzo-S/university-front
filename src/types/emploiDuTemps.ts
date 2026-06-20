@@ -1,9 +1,9 @@
 /**
  * Modèle domaine — emploi du temps académique.
  *
- * Formation → Modules (Cours) + Promotions (classes)
+ * Formation (catalogue) + Promotions (classes)
  * Promotion (1) ── (1) EmploiDuTemps ── (N) Seance
- * Seance = Module + Enseignant + créneau horaire
+ * Seance = Formation + Enseignant + créneau horaire
  */
 
 /** Module du catalogue pédagogique (UE / cours). */

@@ -39,6 +39,41 @@ const formationsSlice = createSlice({
     addFormation: (state, action: PayloadAction<StudentFormation>) => {
       state.items.push(action.payload)
     },
+    ensureFormation: (state, action: PayloadAction<StudentFormation>) => {
+      const index = findFormationIndex(state, action.payload.id)
+      if (index === -1) {
+        state.items.push({
+          ...action.payload,
+          subModules: action.payload.subModules ?? [],
+          enrolledStudentIds: action.payload.enrolledStudentIds ?? [],
+        })
+      }
+    },
+    replaceFormationParcours: (
+      state,
+      action: PayloadAction<{ formationId: string; formation: StudentFormation }>,
+    ) => {
+      const index = findFormationIndex(state, action.payload.formationId)
+      const source = action.payload.formation
+      if (index === -1) {
+        state.items.push({
+          ...source,
+          subModules: source.subModules ?? [],
+          enrolledStudentIds: source.enrolledStudentIds ?? [],
+        })
+        return
+      }
+      state.items[index] = {
+        ...state.items[index],
+        managerName: source.managerName,
+        trainerName: source.trainerName,
+        tutorName: source.tutorName,
+        duration: source.duration,
+        sessionUrl: source.sessionUrl,
+        subModules: source.subModules ?? [],
+        projectDeposits: source.projectDeposits ?? [],
+      }
+    },
     updateFormation: (
       state,
       action: PayloadAction<{ id: string; data: Partial<StudentFormation> }>,
@@ -358,6 +393,8 @@ const formationsSlice = createSlice({
 
 export const {
   addFormation,
+  ensureFormation,
+  replaceFormationParcours,
   updateFormation,
   deleteFormation,
   addSubModule,

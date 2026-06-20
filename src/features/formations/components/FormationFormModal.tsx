@@ -8,6 +8,7 @@ import {
   TextInput,
 } from '@/features/formations/components/formFields'
 import type { StudentFormation } from '@/types/formation'
+import { NIVEAU_ETUDE_OPTIONS } from '@/types/niveauEtude'
 
 export interface FormationFormValues {
   title: string
@@ -24,7 +25,7 @@ const emptyValues: FormationFormValues = {
   description: '',
   imageUrl:
     'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=450&fit=crop',
-  level: 'Licence 3',
+  level: 'LICENCE_3',
   type: 'Présentiel',
   duration: '4 mois',
   sessionUrl: 'https://meet.uchk.sn/session',
@@ -100,10 +101,11 @@ export function FormationFormModal({
               value={values.level}
               onChange={(e) => setValues((v) => ({ ...v, level: e.target.value }))}
             >
-              <option>Licence 2</option>
-              <option>Licence 3</option>
-              <option>Master 1</option>
-              <option>Master 2</option>
+              {NIVEAU_ETUDE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </SelectInput>
           </div>
           <div>

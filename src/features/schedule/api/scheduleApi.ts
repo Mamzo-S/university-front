@@ -20,7 +20,8 @@ export interface FormationInput {
 export interface SeanceInput {
   emploiDuTempsId?: number
   promotionId: number
-  coursId: number
+  coursId?: number
+  formationId?: number
   formateurId: number
   jourSemaine: number
   heureDebut: string
@@ -38,9 +39,12 @@ export interface CoursInput {
 }
 
 export interface PromotionInput {
-  nom: string
+  titre: string
+  slug?: string
+  description?: string
+  /** Rétrocompatibilité emploi du temps */
+  nom?: string
   anneeAcademique?: string
-  formationId: number
 }
 
 function normalizeMySchedule(
@@ -124,6 +128,13 @@ export const scheduleApi = baseApi.injectEndpoints({
       transformResponse: normalizeMySchedule,
       providesTags: ['Schedule'],
     }),
+    getEtudiantSeances: builder.query<BackendSeance[], number | 'me'>({
+      query: (etudiantId) => `/etudiants/${etudiantId}/seances`,
+      transformResponse: normalizeMySchedule,
+      providesTags: (_result, _error, etudiantId) => [
+        { type: 'Schedule', id: `etudiant-${etudiantId}` },
+      ],
+    }),
     createSeance: builder.mutation<BackendSeance, SeanceInput>({
       query: (body) => ({
         url: '/emplois-du-temps/seances',
@@ -183,6 +194,7 @@ export const {
   useGetAllSeancesQuery,
   useGetSeancesByPromotionQuery,
   useGetMySeancesQuery,
+  useGetEtudiantSeancesQuery,
   useCreateSeanceMutation,
   useUpdateSeanceMutation,
   useDeleteSeanceMutation,

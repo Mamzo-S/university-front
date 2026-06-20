@@ -8,6 +8,7 @@ import {
   parseQuizDuration,
 } from '@/features/quiz/utils/quizUtils'
 import { useAppSelector } from '@/app/hooks'
+import { useStudentFormation } from '@/features/formations/hooks/useStudentFormation'
 import { selectFormationById } from '@/features/formations/slice/formationsSlice'
 import {
   findQuizInFormation,
@@ -16,11 +17,13 @@ import {
 import { cn } from '@/lib/utils'
 
 export function StudentQuizPage() {
-  const { id: formationId, quizId } = useParams<{ id: string; quizId: string }>()
+  const { slug, quizId } = useParams<{ slug: string; quizId: string }>()
   const navigate = useNavigate()
-  const formationRecord = useAppSelector((state) =>
-    formationId ? selectFormationById(state, formationId) : undefined,
+  const { formation: apiFormation } = useStudentFormation(slug)
+  const storedFormation = useAppSelector((state) =>
+    slug ? selectFormationById(state, slug) : undefined,
   )
+  const formationRecord = apiFormation ?? storedFormation
   const data = quizId ? findQuizInFormation(formationRecord, quizId) : null
 
   const [answers, setAnswers] = useState<Record<string, string>>({})

@@ -6,8 +6,7 @@ export interface MockStudent {
   birthDate: string
   formation: string
   promotion: string
-  startYear: number
-  endYear?: number
+  niveauEtude: string
   email: string
 }
 
@@ -20,7 +19,7 @@ export const MOCK_STUDENTS: MockStudent[] = [
     birthDate: '2002-05-14',
     formation: 'Licence Informatique',
     promotion: '2024-2025',
-    startYear: 2021,
+    niveauEtude: 'LICENCE_3',
     email: 'student@uchk.sn',
   },
   {
@@ -31,7 +30,7 @@ export const MOCK_STUDENTS: MockStudent[] = [
     birthDate: '2003-11-02',
     formation: 'Licence Gestion',
     promotion: '2024-2025',
-    startYear: 2022,
+    niveauEtude: 'LICENCE_2',
     email: 'khady.mbaye@uchk.sn',
   },
   {
@@ -42,8 +41,7 @@ export const MOCK_STUDENTS: MockStudent[] = [
     birthDate: '2001-08-21',
     formation: 'Master Data Science',
     promotion: '2023-2024',
-    startYear: 2020,
-    endYear: 2024,
+    niveauEtude: 'LICENCE_1',
     email: 'cheikh.gueye@uchk.sn',
   },
   {
@@ -54,7 +52,7 @@ export const MOCK_STUDENTS: MockStudent[] = [
     birthDate: '2004-01-30',
     formation: 'Licence Droit',
     promotion: '2024-2025',
-    startYear: 2023,
+    niveauEtude: 'MASTER_1',
     email: 'awa.diop@uchk.sn',
   },
   {
@@ -65,7 +63,7 @@ export const MOCK_STUDENTS: MockStudent[] = [
     birthDate: '2002-03-12',
     formation: 'Licence Informatique',
     promotion: '2024-2025',
-    startYear: 2022,
+    niveauEtude: 'LICENCE_2',
     email: 'moussa.ndiaye@uchk.sn',
   },
   {
@@ -76,7 +74,7 @@ export const MOCK_STUDENTS: MockStudent[] = [
     birthDate: '2001-07-08',
     formation: 'Licence Informatique',
     promotion: '2024-2025',
-    startYear: 2021,
+    niveauEtude: 'LICENCE_3',
     email: 'fatou.sarr@uchk.sn',
   },
   {
@@ -87,7 +85,7 @@ export const MOCK_STUDENTS: MockStudent[] = [
     birthDate: '2003-12-19',
     formation: 'Licence Informatique',
     promotion: '2024-2025',
-    startYear: 2023,
+    niveauEtude: 'MASTER_1',
     email: 'ibrahima.lo@uchk.sn',
   },
   {
@@ -98,7 +96,7 @@ export const MOCK_STUDENTS: MockStudent[] = [
     birthDate: '2002-09-25',
     formation: 'Licence Informatique',
     promotion: '2024-2025',
-    startYear: 2022,
+    niveauEtude: 'LICENCE_2',
     email: 'mariama.cisse@uchk.sn',
   },
 ]

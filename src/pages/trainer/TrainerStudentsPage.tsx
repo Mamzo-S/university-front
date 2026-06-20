@@ -9,6 +9,7 @@ import {
   useGetStudentsQuery,
 } from '@/features/students/api/studentsApi'
 import { StudentCreateModal } from '@/features/students/components/StudentCreateModal'
+import { formatNiveauEtude } from '@/types/niveauEtude'
 
 export function TrainerStudentsPage() {
   const { data: myModules = [] } = useGetMyModulesQuery()
@@ -125,7 +126,7 @@ export function TrainerStudentsPage() {
                 <th className="px-4 py-3 font-medium">INE</th>
                 <th className="px-4 py-3 font-medium">Filière</th>
                 <th className="px-4 py-3 font-medium">Promotion</th>
-                <th className="px-4 py-3 font-medium">Entrée</th>
+                <th className="px-4 py-3 font-medium">Niveau</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -140,7 +141,9 @@ export function TrainerStudentsPage() {
                   </td>
                   <td className="px-4 py-3 text-slate-600">{student.filiereNom ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-600">{student.promotionNom ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{student.anneeEntree ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {formatNiveauEtude(student.niveau)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -153,7 +156,6 @@ export function TrainerStudentsPage() {
         onClose={() => setModalOpen(false)}
         filieres={availableFilieres}
         promotions={availablePromotions}
-        moduleOptions={myModules}
         isSubmitting={creating}
         onSubmit={async (values) => {
           await createStudent(values).unwrap()

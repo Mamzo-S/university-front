@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import { ScheduleEventCard } from '@/features/schedule/components/ScheduleEventCard'
 import {
-  MODULE_DRAG_TYPE,
+  COMPACT_SCHEDULE_CONFIG,
+  FORMATION_DRAG_TYPE,
   SEANCE_DRAG_TYPE,
   SCHEDULE_CONFIG,
+  type ScheduleGridConfig,
   generateTimeSlots,
   getEventPosition,
   getNowLinePosition,
@@ -25,6 +27,9 @@ interface WeeklyScheduleProps {
   canPlan?: boolean
   isLoading?: boolean
   statsLabel?: string
+  planHint?: string
+  /** Grille plus basse (vue étudiant). */
+  compact?: boolean
   onSlotSelect?: (slot: ScheduleSlotSelection) => void
   onEventClick?: (eventId: string) => void
   onEventMove?: (move: ScheduleEventMove) => void
@@ -37,6 +42,8 @@ export function WeeklySchedule({
   canPlan = true,
   isLoading = false,
   statsLabel,
+  planHint,
+  compact = false,
   onSlotSelect,
   onEventClick,
   onEventMove,
@@ -46,9 +53,12 @@ export function WeeklySchedule({
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null)
   const [draggingEventId, setDraggingEventId] = useState<string | null>(null)
 
+  const gridConfig: ScheduleGridConfig = compact ? COMPACT_SCHEDULE_CONFIG : SCHEDULE_CONFIG
+  const { slotHeight } = gridConfig
+
   const weekDays = useMemo(() => getWeekDays(today), [today])
-  const timeSlots = useMemo(() => generateTimeSlots(), [])
-  const nowLine = useMemo(() => getNowLinePosition(), [])
+  const timeSlots = useMemo(() => generateTimeSlots(gridConfig), [gridConfig])
+  const nowLine = useMemo(() => getNowLinePosition(gridConfig), [gridConfig])
 
   const sourceEvents = events ?? (editable ? [] : MOCK_STUDENT_SCHEDULE.events)
 
@@ -69,15 +79,15 @@ export function WeeklySchedule({
     return map
   }, [sourceEvents])
 
-  const gridHeight = timeSlots.length * SCHEDULE_CONFIG.slotHeight
+  const gridHeight = timeSlots.length * slotHeight
 
   const resolveSlotFromPointer = useCallback((clientY: number, currentTarget: EventTarget) => {
     const column = currentTarget as HTMLElement
     const rect = column.getBoundingClientRect()
     const y = clientY - rect.top
-    const slotIndex = yOffsetToSlotIndex(y)
-    return slotIndexToTimeRange(slotIndex)
-  }, [])
+    const slotIndex = yOffsetToSlotIndex(y, gridConfig)
+    return slotIndexToTimeRange(slotIndex, 120, gridConfig)
+  }, [gridConfig])
 
   const handleColumnClick = useCallback(
     (dayIndex: number, e: React.MouseEvent<HTMLDivElement>) => {
@@ -113,16 +123,17 @@ export function WeeklySchedule({
 
       if (!onSlotSelect) return
 
-      const moduleIdRaw =
-        e.dataTransfer.getData(MODULE_DRAG_TYPE) ||
+      const formationIdRaw =
+        e.dataTransfer.getData(FORMATION_DRAG_TYPE) ||
         e.dataTransfer.getData('text/plain')
-      const coursId = moduleIdRaw ? Number(moduleIdRaw) : undefined
+      const formationId = formationIdRaw ? Number(formationIdRaw) : undefined
 
       onSlotSelect({
         dayOfWeek: dayIndex,
         startTime,
         endTime,
-        coursId: coursId && !Number.isNaN(coursId) ? coursId : undefined,
+        formationId:
+          formationId && !Number.isNaN(formationId) ? formationId : undefined,
       })
     },
     [editable, canPlan, onSlotSelect, onEventMove, resolveSlotFromPointer],
@@ -137,11 +148,11 @@ export function WeeklySchedule({
       e.dataTransfer.dropEffect = isSeanceDrag ? 'move' : 'copy'
 
       const rect = e.currentTarget.getBoundingClientRect()
-      const slotIndex = yOffsetToSlotIndex(e.clientY - rect.top)
+      const slotIndex = yOffsetToSlotIndex(e.clientY - rect.top, gridConfig)
       setDragOverDay(dayIndex)
       setDragOverSlot(slotIndex)
     },
-    [editable, canPlan],
+    [editable, canPlan, gridConfig],
   )
 
   return (
@@ -163,9 +174,10 @@ export function WeeklySchedule({
 
       {editable && (
         <p className="mb-3 rounded-lg border border-dashed border-primary-200 bg-primary-50/50 px-3 py-2 text-xs text-primary-800">
-          {canPlan
-            ? 'Vue globale — cliquez, glissez un module ou déplacez une séance. Filtres à venir.'
-            : 'Sélectionnez une promotion ci-dessous pour planifier de nouvelles séances.'}
+          {planHint ??
+            (canPlan
+              ? 'Cliquez sur un créneau vide pour ajouter une séance, glissez une formation ou déplacez une séance existante.'
+              : 'Ajoutez au moins un module, un enseignant et une promotion pour planifier.')}
         </p>
       )}
 
@@ -188,7 +200,8 @@ export function WeeklySchedule({
                   <div
                     key={date.toISOString()}
                     className={cn(
-                      'px-2 py-3 text-center',
+                      'px-2 text-center',
+                      compact ? 'py-2' : 'py-3',
                       isToday
                         ? 'bg-primary-600 text-white'
                         : 'bg-white text-slate-600',
@@ -220,7 +233,7 @@ export function WeeklySchedule({
                   <div
                     key={slot}
                     className="flex items-start justify-end border-b border-slate-50 pr-2 pt-0.5 text-[10px] text-slate-400"
-                    style={{ height: SCHEDULE_CONFIG.slotHeight }}
+                    style={{ height: slotHeight }}
                   >
                     {slot.endsWith(':00') ? slot : ''}
                   </div>
@@ -257,13 +270,14 @@ export function WeeklySchedule({
                         key={slot}
                         className={cn(
                           'border-b border-slate-50',
+                          editable && canPlan && 'pointer-events-none',
                           editable &&
                             canPlan &&
                             isDropTarget &&
                             dragOverSlot === slotIndex &&
                             'bg-primary-100/70',
                         )}
-                        style={{ height: SCHEDULE_CONFIG.slotHeight }}
+                        style={{ height: slotHeight }}
                       />
                     ))}
 
@@ -283,7 +297,8 @@ export function WeeklySchedule({
                       <div key={event.id} data-schedule-event>
                         <ScheduleEventCard
                           event={event}
-                          style={getEventPosition(event.startTime, event.endTime)}
+                          style={getEventPosition(event.startTime, event.endTime, gridConfig)}
+                          compact={compact}
                           interactive={editable}
                           draggable={editable && canPlan && !!onEventMove}
                           isDragging={draggingEventId === event.id}
@@ -294,7 +309,7 @@ export function WeeklySchedule({
                         {draggingEventId === event.id && (
                           <div
                             className="pointer-events-none absolute inset-x-1 rounded-lg border-2 border-dashed border-primary-300 bg-primary-50/40"
-                            style={getEventPosition(event.startTime, event.endTime)}
+                            style={getEventPosition(event.startTime, event.endTime, gridConfig)}
                           />
                         )}
                       </div>
@@ -307,6 +322,7 @@ export function WeeklySchedule({
         </div>
       </div>
 
+      {!compact && (
       <div className="mt-4 flex flex-wrap gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
         {[
           { color: 'bg-primary-500', label: 'Cours' },
@@ -329,6 +345,7 @@ export function WeeklySchedule({
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }
